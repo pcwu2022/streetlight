@@ -42,7 +42,7 @@ export function isMainRoad(roadName: string): boolean {
   // 匹配群組說明：
   // - (?:...段)? : 允許結尾帶有「段」或「幾路幾段」
   // - (國道|省道|縣道|市道|快速道路|快速公路)... : 允許公路主線系統
-  const mainRoadRegex = /^(?:.*(?:路|街|大道|橋|地下道)(?:\d+段|第\d+段|.[段])?|(?:國道|省道|縣道|市道|快速道路|快速公路|快速道路|台\d+線|縣\d+線).*[號線]?)$/;
+  const mainRoadRegex = /^(?:.*(?:路|街|大道|橋|地下道|隧道)(?:\d+段|第\d+段|.[段])?|(?:國道|省道|縣道|市道|快速道路|快速公路|快速道路|台\d+線|縣\d+線).*[號線]?)$/;
 
   return mainRoadRegex.test(trimmedName);
 }
@@ -89,6 +89,7 @@ export function computeStats(roads: RoadFeature[], foundNames: Set<string>, rece
       '快速道路': { total: 0, found: 0 },
       '橋': { total: 0, found: 0 },
       '地下道': { total: 0, found: 0 },
+      '隧道': { total: 0, found: 0 },
       'other': { total: 0, found: 0 },
     },
     longestFound: null,

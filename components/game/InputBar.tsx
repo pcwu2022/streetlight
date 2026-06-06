@@ -43,7 +43,7 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
     }
 
     // Anti-cheat: Ignore pure reserved keywords/types
-    const reservedWords = new Set(['路', '街', '大道', '橋', '地下道', '高速公路', '快速道路', '快速公路', '國道', '環線', '支線', '省道', '縣道', '市道', '大道一段', '大道二段', '大道三段', '大道四段', '大道五段', '大道六段', '大道七段', '大道八段', '大道九段', '大道十段']);
+    const reservedWords = new Set(['路', '街', '大道', '橋', '地下道', '隧道', '高速公路', '快速道路', '快速公路', '國道', '環線', '支線', '省道', '縣道', '市道', '大道一段', '大道二段', '大道三段', '大道四段', '大道五段', '大道六段', '大道七段', '大道八段', '大道九段', '大道十段']);
     if (reservedWords.has(normalizedVal)) {
       addToast('請輸入具體的道路名稱，不能僅輸入類型', 'warning');
       return;

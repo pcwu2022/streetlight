@@ -34,7 +34,7 @@ export const RoadPolyline = memo(({ road, isFound, isHovered, projectedPoints, o
     } else if (road.type === '橋') {
       strokeColor = 'var(--road-bridge)';
       filter = 'url(#glow-amber)'; // Gold glow
-    } else if (road.type === '地下道') {
+    } else if (road.type === '地下道' || road.type === '隧道') {
       strokeColor = 'var(--road-underpass)';
       filter = 'none'; // Minimalistic
     } else {

@@ -40,6 +40,7 @@ export function Sidebar({ stats }: Props) {
           <TypeRow label="快速道路" color="var(--road-express)" found={stats.byType['快速道路'].found} total={stats.byType['快速道路'].total} />
           <TypeRow label="橋" color="var(--road-bridge)" found={stats.byType['橋'].found} total={stats.byType['橋'].total} />
           <TypeRow label="地下道" color="var(--road-underpass)" found={stats.byType['地下道'].found} total={stats.byType['地下道'].total} />
+          <TypeRow label="隧道" color="var(--road-underpass)" found={stats.byType['隧道'].found} total={stats.byType['隧道'].total} />
         </div>
       </div>
 

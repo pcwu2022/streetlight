@@ -16,6 +16,7 @@ export function getRoadType(name: string): RoadType {
   if (/(?:路)(?:\d+段|第\d+段|.[段])?$/.test(name)) return '路';
   if (/(?:橋)$/.test(name)) return '橋';
   if (/(?:地下道)$/.test(name)) return '地下道';
+  if (/(?:隧道)$/.test(name)) return '隧道';
   return 'other';
 }
 
@@ -24,7 +25,7 @@ export async function fetchRoadsForRegion(osmRelationId: number): Promise<RoadFe
 [out:json][timeout:90];
 area(${3600000000 + osmRelationId})->.searchArea;
 (
-  way["highway"]["name"~"路|街|道|橋|地下道"](area.searchArea);
+  way["highway"]["name"~"路|街|道|橋|地下道|隧道"](area.searchArea);
 );
 out geom;
   `.trim();
