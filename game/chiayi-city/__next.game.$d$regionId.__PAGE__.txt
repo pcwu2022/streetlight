@@ -1,6 +1,6 @@
 1:"$Sreact.fragment"
-2:I[26478,["/streetlight/_next/static/chunks/1vpoii5c4sa36.js","/streetlight/_next/static/chunks/3ywpldblg905c.js","/streetlight/_next/static/chunks/1a1cxh3e2sry-.js"],"GameClient"]
+2:I[26478,["/streetlight/_next/static/chunks/1vpoii5c4sa36.js","/streetlight/_next/static/chunks/3ywpldblg905c.js","/streetlight/_next/static/chunks/1r-r8qkqs6ijg.js"],"GameClient"]
 3:I[97367,["/streetlight/_next/static/chunks/1vpoii5c4sa36.js","/streetlight/_next/static/chunks/3ywpldblg905c.js"],"OutletBoundary"]
 4:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"regionId":"chiayi-city","region":{"id":"chiayi-city","nameZh":"嘉義市","osmRelationId":2790418,"type":"city"}}],[["$","script","script-0",{"src":"/streetlight/_next/static/chunks/1a1cxh3e2sry-.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"x4eALVtbyOi-5DYuTjOIS"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"regionId":"chiayi-city","region":{"id":"chiayi-city","nameZh":"嘉義市","osmRelationId":2790418,"type":"city"}}],[["$","script","script-0",{"src":"/streetlight/_next/static/chunks/1r-r8qkqs6ijg.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"cgKkW5lSr2z9TG0lPFqFG"}
 5:null
