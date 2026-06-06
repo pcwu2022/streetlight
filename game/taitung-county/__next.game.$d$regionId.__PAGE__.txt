@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[26478,["/streetlight/_next/static/chunks/1vpoii5c4sa36.js","/streetlight/_next/static/chunks/3ywpldblg905c.js","/streetlight/_next/static/chunks/3dks6w5zmcdj2.js"],"GameClient"]
+3:I[97367,["/streetlight/_next/static/chunks/1vpoii5c4sa36.js","/streetlight/_next/static/chunks/3ywpldblg905c.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"regionId":"taitung-county","region":{"id":"taitung-county","nameZh":"台東縣","osmRelationId":2921155,"type":"county"}}],[["$","script","script-0",{"src":"/streetlight/_next/static/chunks/3dks6w5zmcdj2.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"qTC_R4kY9QIZ9qYn8Z_s2"}
+5:null
