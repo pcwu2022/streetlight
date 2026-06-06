@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { RoadFeature } from '../../types';
 import { normalizeRoadName } from '../../lib/roadUtils';
 import { useToast } from '../ui/Toast';
@@ -12,7 +12,9 @@ interface Props {
 
 export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
   const [input, setInput] = useState('');
+  const [status, setStatus] = useState<'none' | 'success' | 'error'>('none');
   const inputRef = useRef<HTMLInputElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -27,18 +29,44 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
     return () => window.removeEventListener('keydown', handleKeydown);
   }, []);
 
-  useEffect(() => {
-    const normalizedInput = normalizeRoadName(input);
-    if (normalizedInput.length >= 2) {
-      const matchingUnfound = roads.filter(r => !foundRoads.has(r.name) && r.name.includes(normalizedInput));
-      
-      if (matchingUnfound.length > 0) {
-        const uniqueNames = Array.from(new Set(matchingUnfound.map(r => r.name)));
-        onRoadsFound(uniqueNames);
+  const checkMatch = useCallback((val: string) => {
+    const normalizedVal = normalizeRoadName(val);
+    if (normalizedVal.length < 2) return;
+
+    const allMatches = roads.filter(r => r.name.includes(normalizedVal));
+    const unfoundMatches = allMatches.filter(r => !foundRoads.has(r.name));
+
+    if (unfoundMatches.length > 0) {
+      const uniqueNames = Array.from(new Set(unfoundMatches.map(r => r.name)));
+      onRoadsFound(uniqueNames);
+      setInput('');
+      setStatus('success');
+      setTimeout(() => setStatus('none'), 500);
+    } else if (allMatches.length > 0) {
+      const exactMatch = allMatches.find(r => r.name === normalizedVal);
+      if (exactMatch) {
+        addToast(`「${exactMatch.name}」已經點亮了！項目`, 'warning');
         setInput('');
       }
+    } else {
+      // No matches at all
+      setStatus('error');
+      setTimeout(() => setStatus('none'), 500);
     }
-  }, [input, roads, foundRoads, onRoadsFound]);
+  }, [roads, foundRoads, onRoadsFound, addToast]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInput(val);
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    if (normalizeRoadName(val).length >= 2) {
+      timeoutRef.current = setTimeout(() => {
+        checkMatch(val);
+      }, 300); // 300ms delay
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -71,16 +99,20 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
   };
 
   return (
-    <div className="absolute bottom-0 left-0 w-full p-6 pointer-events-none flex justify-center">
+    <div className="absolute bottom-0 left-0 w-full p-4 md:p-6 pointer-events-none flex justify-center">
       <div className="w-full max-w-2xl relative pointer-events-auto">
         <input 
           ref={inputRef}
           type="text" 
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="輸入路名…（例如：中山）" 
-          className="w-full p-4 bg-surface border-2 border-border focus:border-cyan outline-none rounded-xl text-xl font-sans shadow-xl text-text-primary placeholder-text-muted/50 transition-colors"
+          placeholder="輸入路名…" 
+          className={`w-full p-3 md:p-4 bg-surface border-2 outline-none rounded-xl text-lg md:text-xl font-sans shadow-xl text-text-primary placeholder-text-muted/50 transition-all duration-300 ${
+            status === 'success' ? 'border-green-500 scale-[1.02]' : 
+            status === 'error' ? 'border-red-500' : 
+            'border-border focus:border-cyan'
+          }`}
         />
       </div>
     </div>

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useRef, useEffect, MouseEvent, TouchEvent, WheelEvent } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { RoadFeature } from '../../types';
-import { ProjectionParams, projectToSVG, getBoundingBox } from '../../lib/geo';
+import { getBoundingBox, projectToSVG } from '../../lib/geo';
 import { RoadPolyline } from './RoadPolyline';
 
 interface Props {
@@ -14,40 +14,72 @@ interface Props {
 
 export function MapCanvas({ roads, foundRoads, onRoadHover, resetZoomTrigger }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   
-  const [pointsMap, setPointsMap] = useState<Map<number, [number,number][]>>(new Map());
+  // Base SVG dimensions (large enough for detail)
+  const SVG_WIDTH = 2000;
+  const SVG_HEIGHT = 1600;
 
-  // Handle SVG Projection
-  useEffect(() => {
-    if (roads.length === 0 || !containerRef.current) return;
-    const { clientWidth, clientHeight } = containerRef.current;
-    
-    // Some arbitrary large SVG base size to preserve detail
-    const svgW = 2000;
-    const svgH = 1600;
-    
-    // Scale container ratio to base SVG
-    const bbox = getBoundingBox(roads);
-    const newPointsMap = new Map<number, [number,number][]>();
-    
-    // Project all roads
+  const bbox = useMemo(() => getBoundingBox(roads), [roads]);
+  
+  // Project all roads once
+  const allProjectedPoints = useMemo(() => {
+    if (roads.length === 0) return new Map<number, [number, number][]>();
+    const pointsMap = new Map<number, [number, number][]>();
     for (const road of roads) {
-      const p = projectToSVG(road.coordinates, bbox, svgW, svgH, 50);
-      newPointsMap.set(road.id, p);
+      pointsMap.set(road.id, projectToSVG(road.coordinates, bbox, SVG_WIDTH, SVG_HEIGHT, 50));
     }
-    setPointsMap(newPointsMap);
-  }, [roads]);
+    return pointsMap;
+  }, [roads, bbox]);
+
+  const unfoundRoads = useMemo(() => roads.filter(r => !foundRoads.has(r.name)), [roads, foundRoads]);
+  const foundRoadsData = useMemo(() => roads.filter(r => foundRoads.has(r.name)), [roads, foundRoads]);
+
+  // Render static background once to canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || roads.length === 0) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, SVG_WIDTH, SVG_HEIGHT);
+    
+    // Setup styles for unfound roads
+    ctx.strokeStyle = '#2a3d5a'; // Slightly brighter than background
+    ctx.lineWidth = 0.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Draw all unfound roads
+    for (const road of unfoundRoads) {
+      const points = allProjectedPoints.get(road.id);
+      if (!points || points.length < 2) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(points[0][0], points[0][1]);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i][0], points[i][1]);
+      }
+      ctx.stroke();
+    }
+  }, [unfoundRoads, allProjectedPoints, roads.length]);
 
   useEffect(() => {
-    setScale(1);
+    if (!containerRef.current || roads.length === 0) return;
+    const { clientWidth, clientHeight } = containerRef.current;
+    const fitScale = Math.min(clientWidth / SVG_WIDTH, clientHeight / SVG_HEIGHT);
+    
+    setScale(fitScale * 0.9); // fitting with a small margin
     setPosition({ x: 0, y: 0 });
-  }, [resetZoomTrigger]);
+  }, [resetZoomTrigger, roads.length]);
 
-  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     const zoomFactor = 1.1;
     const direction = e.deltaY < 0 ? 1 : -1;
@@ -88,53 +120,53 @@ export function MapCanvas({ roads, foundRoads, onRoadHover, resetZoomTrigger }: 
       onPointerCancel={handlePointerUp}
     >
       <div 
-        className="w-full h-full transform origin-center transition-transform duration-75"
-        style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})` }}
+        className="w-full h-full relative"
+        style={{ 
+          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+          transformOrigin: 'center',
+          transition: isDragging ? 'none' : 'transform 100ms ease-out'
+        }}
       >
-        <svg 
-          viewBox="0 0 2000 1600" 
-          className="w-full h-full drop-shadow-2xl"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          <defs>
-            <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <filter id="glow-amber" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <filter id="glow-magenta" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-          </defs>
+        <div style={{ width: SVG_WIDTH, height: SVG_HEIGHT, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+          <canvas 
+            ref={canvasRef}
+            width={SVG_WIDTH} 
+            height={SVG_HEIGHT}
+            className="absolute inset-0 pointer-events-none opacity-40 shadow-2xl"
+          />
+          <svg 
+            viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
+            className="absolute inset-0 w-full h-full"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <defs>
+              <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="glow-amber" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="glow-magenta" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
 
-          {/* First render unfound roads so they are in background */}
-          {roads.filter(road => !foundRoads.has(road.name)).map(road => (
-            <RoadPolyline 
-              key={road.id}
-              road={road}
-              isFound={false}
-              isHovered={false} // Tooltip hovering adds complexity for not-found things, let's keep it simple
-              projectedPoints={pointsMap.get(road.id) || []}
-              onHover={onRoadHover}
-            />
-          ))}
-
-          {/* Then render found roads on top */}
-          {roads.filter(road => foundRoads.has(road.name)).map(road => (
-            <RoadPolyline 
-              key={road.id}
-              road={road}
-              isFound={true}
-              isHovered={false}
-              projectedPoints={pointsMap.get(road.id) || []}
-              onHover={onRoadHover}
-            />
-          ))}
-        </svg>
+            {/* Render ONLY found roads as SVG for performance */}
+            {foundRoadsData.map(road => (
+              <RoadPolyline 
+                key={road.id}
+                road={road}
+                isFound={true}
+                isHovered={false}
+                projectedPoints={allProjectedPoints.get(road.id) || []}
+                onHover={onRoadHover}
+              />
+            ))}
+          </svg>
+        </div>
       </div>
     </div>
   );

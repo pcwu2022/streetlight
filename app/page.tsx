@@ -12,6 +12,7 @@ export default function Home() {
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [search, setSearch] = useState('');
   const [resetTarget, setResetTarget] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     setSaves(listGames());
@@ -23,8 +24,12 @@ export default function Home() {
     setResetTarget(null);
   };
 
-  const filteredRegions = REGIONS.filter(r => r.nameZh.includes(search));
+  const filteredRegions = search 
+    ? REGIONS.filter(r => r.nameZh.includes(search))
+    : REGIONS;
   
+  const showDropdown = isFocused || search.length > 0;
+
   return (
     <main className="flex-1 flex flex-col items-center justify-start p-8 relative min-h-screen">
       <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,var(--color-border)_1px,transparent_1.5px)] bg-[size:24px_24px] pointer-events-none -z-10" />
@@ -43,11 +48,19 @@ export default function Home() {
           type="text" 
           value={search}
           onChange={e => setSearch(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+            // Delay blur slightly to allow Link clicks
+            setTimeout(() => setIsFocused(false), 200);
+          }}
           placeholder="輸入城市或地區…" 
           className="w-full p-4 bg-surface border-2 border-border focus:border-cyan outline-none rounded-xl text-lg font-sans transition-colors"
         />
-        {search.length > 0 && (
+        {showDropdown && (
           <ul className="absolute top-full left-0 w-full mt-2 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto">
+            {search.length === 0 && (
+              <li className="p-3 bg-bg/50 text-xs font-mono text-text-muted border-b border-border">建議區域</li>
+            )}
             {filteredRegions.length === 0 && (
               <li className="p-4 text-text-muted text-center font-mono">找不到相關區域</li>
             )}

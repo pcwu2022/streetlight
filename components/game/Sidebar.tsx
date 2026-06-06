@@ -33,9 +33,13 @@ export function Sidebar({ stats }: Props) {
       <div className="border-t border-border pt-6">
         <h2 className="text-text-muted text-sm font-mono mb-4 tracking-widest">類型統計</h2>
         <div className="flex flex-col gap-4">
-          <TypeRow label="路" color="bg-cyan" found={stats.byType['路'].found} total={stats.byType['路'].total} />
-          <TypeRow label="街" color="bg-amber" found={stats.byType['街'].found} total={stats.byType['街'].total} />
-          <TypeRow label="大道" color="bg-magenta" found={stats.byType['大道'].found} total={stats.byType['大道'].total} />
+          <TypeRow label="路" color="var(--road-road)" found={stats.byType['路'].found} total={stats.byType['路'].total} />
+          <TypeRow label="街" color="var(--road-street)" found={stats.byType['街'].found} total={stats.byType['街'].total} />
+          <TypeRow label="大道" color="var(--road-boulevard)" found={stats.byType['大道'].found} total={stats.byType['大道'].total} />
+          <TypeRow label="高速公路" color="var(--road-highway)" found={stats.byType['高速公路'].found} total={stats.byType['高速公路'].total} />
+          <TypeRow label="快速道路" color="var(--road-express)" found={stats.byType['快速道路'].found} total={stats.byType['快速道路'].total} />
+          <TypeRow label="橋" color="var(--road-bridge)" found={stats.byType['橋'].found} total={stats.byType['橋'].total} />
+          <TypeRow label="地下道" color="var(--road-underpass)" found={stats.byType['地下道'].found} total={stats.byType['地下道'].total} />
         </div>
       </div>
 
@@ -79,7 +83,10 @@ function TypeRow({ label, color, found, total }: { label: string; color: string;
         <span className="font-mono text-xs">{found} / {total}</span>
       </div>
       <div className="h-1.5 bg-bg rounded overflow-hidden">
-        <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${percent}%` }} />
+        <div 
+          className="h-full transition-all duration-500" 
+          style={{ width: `${percent}%`, backgroundColor: color }} 
+        />
       </div>
     </div>
   );

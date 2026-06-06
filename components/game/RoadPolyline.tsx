@@ -16,18 +16,30 @@ export const RoadPolyline = memo(({ road, isFound, isHovered, projectedPoints, o
   let filter = 'none';
 
   if (isFound) {
-    if (road.type === '大道' || road.type === '大路') {
-      strokeColor = 'var(--color-magenta)';
-      filter = 'url(#glow-magenta)';
-    } else if (road.type === '街') {
-      strokeColor = 'var(--color-amber)';
-      filter = 'url(#glow-amber)';
+    if (road.type === '高速公路') {
+      strokeColor = 'var(--road-highway)';
+      filter = 'url(#glow-magenta)'; // Warm glow
+    } else if (road.type === '快速道路') {
+      strokeColor = 'var(--road-express)';
+      filter = 'url(#glow-magenta)'; // Warm glow
+    } else if (road.type === '大道') {
+      strokeColor = 'var(--road-boulevard)';
+      filter = 'url(#glow-magenta)'; // Pink glow
     } else if (road.type === '路') {
-      strokeColor = 'var(--color-cyan)';
-      filter = 'url(#glow-cyan)';
+      strokeColor = 'var(--road-road)';
+      filter = 'url(#glow-cyan)'; // Cool glow
+    } else if (road.type === '街') {
+      strokeColor = 'var(--road-street)';
+      filter = 'url(#glow-cyan)'; // Cool glow
+    } else if (road.type === '橋') {
+      strokeColor = 'var(--road-bridge)';
+      filter = 'url(#glow-amber)'; // Gold glow
+    } else if (road.type === '地下道') {
+      strokeColor = 'var(--road-underpass)';
+      filter = 'none'; // Minimalistic
     } else {
-      strokeColor = 'var(--color-cyan)'; // defaults to cyan
-      filter = 'url(#glow-cyan)';
+      strokeColor = 'var(--color-text-muted)';
+      filter = 'none';
     }
   } else if (isHovered) {
     strokeColor = '#2a3d5a';

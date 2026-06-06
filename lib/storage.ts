@@ -36,11 +36,45 @@ export function listGames(): GameSave[] {
   return saves.sort((a, b) => new Date(b.lastPlayedAt).getTime() - new Date(a.lastPlayedAt).getTime());
 }
 
+export async function clearLegacyStorage(): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  // 1. Clear any old OSM cache from localStorage (we moved to IndexedDB)
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.startsWith('osmData_') || key === 'osm-cache')) {
+      localStorage.removeItem(key);
+      i--; // Adjust index after removal
+    }
+  }
+
+  // 2. Clear old versions from IndexedDB
+  try {
+    const db = await openDB();
+    const tx = db.transaction('osmCache', 'readwrite');
+    const store = tx.objectStore('osmCache');
+    const keysRequest = store.getAllKeys();
+
+    keysRequest.onsuccess = () => {
+      const keys = keysRequest.result as string[];
+      for (const key of keys) {
+        if (typeof key === 'string' && !key.startsWith('osmData_v3_')) {
+          store.delete(key);
+        }
+      }
+    };
+  } catch (e) {
+    console.error('Failed to clear legacy IndexedDB data', e);
+  }
+}
+
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('StreetlightDB', 1);
     request.onupgradeneeded = () => {
-      request.result.createObjectStore('osmCache');
+      if (!request.result.objectStoreNames.contains('osmCache')) {
+        request.result.createObjectStore('osmCache');
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);

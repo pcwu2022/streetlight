@@ -4,9 +4,21 @@
   --color-bg: #080c18;
   --color-surface: #0f1629;
   --color-border: #1e2d4a;
+  
+  /* UI Colors */
   --color-cyan: #00e5ff;
   --color-amber: #ffc93c;
   --color-magenta: #ff6ef7;
+  
+  /* Road Colors */
+  --road-road: var(--color-cyan);
+  --road-street: #38bdf8;
+  --road-boulevard: var(--color-magenta);
+  --road-highway: #ef4444;
+  --road-express: #f97316;
+  --road-bridge: #fbbf24;
+  --road-underpass: #94a3b8;
+
   --color-text-primary: #e8f4f8;
   --color-text-muted: #5a7a99;
 }

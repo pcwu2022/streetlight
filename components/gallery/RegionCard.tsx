@@ -21,31 +21,41 @@ export function RegionCard({ region, save, onReset }: Props) {
   const daysAgo = Math.floor((new Date().getTime() - new Date(save.lastPlayedAt).getTime()) / (1000 * 3600 * 24));
 
   return (
-    <div className="bg-surface border border-border p-4 rounded-xl flex flex-col gap-4 shadow-lg hover:border-cyan transition-colors">
+    <div className="group bg-surface/40 backdrop-blur-sm border border-border p-6 rounded-2xl flex flex-col gap-5 shadow-xl hover:border-cyan/50 hover:shadow-cyan/5 transition-all duration-300">
       <div className="flex justify-between items-start">
-        <h3 className="text-2xl font-serif text-cyan">{region.nameZh}</h3>
-        <ProgressRing percentage={comp || (foundCount > 0 ? 1 : 0)} size={40} color="var(--color-cyan)" strokeWidth={3} />
+        <div className="flex flex-col gap-1">
+          <h3 className="text-2xl font-bold tracking-tight text-white group-hover:text-cyan transition-colors">
+            {region.nameZh}
+          </h3>
+          <div className="text-sm font-mono text-cyan/80">
+            {foundCount} 條路已點亮
+          </div>
+        </div>
+        <ProgressRing 
+          percentage={comp || (foundCount > 0 ? 1 : 0)} 
+          size={48} 
+          color="var(--road-road)" 
+          strokeWidth={4} 
+        />
       </div>
       
-      <div className="h-24 bg-bg rounded-md flex items-center justify-center opacity-50 relative overflow-hidden">
-        {/* Placeholder for SVG minimap */}
-        <span className="text-sm font-mono text-text-muted">{foundCount} 條路已點亮</span>
-      </div>
-
-      <div className="flex justify-between items-center mt-2">
-        <div className="text-xs text-text-muted font-mono">
-          上次遊戲: {daysAgo === 0 ? '今天' : `${daysAgo}天前`}
+      <div className="flex flex-col gap-4 mt-auto">
+        <div className="text-xs text-text-muted font-mono bg-bg/50 py-2 px-3 rounded-lg flex items-center gap-2">
+          <span className="opacity-50">🕒</span>
+          上次遊戲: {daysAgo === 0 ? '今天' : `${daysAgo} 天前`}
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex gap-3">
           <button 
             onClick={onReset}
-            className="px-3 py-1.5 text-sm bg-transparent border border-border rounded text-text-muted hover:text-magenta hover:border-magenta hover:bg-magenta/10 transition-colors"
+            className="flex-1 py-3 text-sm bg-bg border border-border rounded-xl text-text-muted hover:text-rose-400 hover:border-rose-400/50 hover:bg-rose-400/5 transition-all duration-200"
           >
             重新開始
           </button>
           <Link 
             href={`/game/${region.id}`}
-            className="px-3 py-1.5 text-sm bg-cyan text-bg font-bold rounded hover:bg-white transition-colors"
+            style={{ backgroundColor: 'var(--color-cyan)', color: 'var(--color-bg)' }}
+            className="flex-[1.5] py-3 text-sm font-bold rounded-xl hover:bg-white text-center transition-all duration-200 shadow-lg shadow-cyan/20 cursor-pointer"
           >
             繼續遊戲
           </Link>

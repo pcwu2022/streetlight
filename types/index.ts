@@ -1,4 +1,4 @@
-export type RoadType = '路' | '街' | '大道' | '大路' | '道' | 'other';
+export type RoadType = '路' | '街' | '大道' | '高速公路' | '快速道路' | '橋' | '地下道' | 'other';
 
 export interface RoadFeature {
   id: number;
@@ -26,5 +26,5 @@ export interface Region {
   id: string;          // slugified, e.g. "hsinchu-city"
   nameZh: string;      // e.g. "新竹市"
   osmRelationId: number;
-  type: 'city' | 'town' | 'district';
+  type: 'city' | 'town' | 'district' | 'county';
 }

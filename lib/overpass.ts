@@ -3,21 +3,28 @@ import { haversineKm } from './geo';
 import { isMainRoad } from './roadUtils';
 
 export function getRoadType(name: string): RoadType {
-  if (name.includes('大道')) return '大道';
-  if (name.includes('大路')) return '大路';
-  if (name.includes('路')) return '路';
-  if (name.includes('街')) return '街';
-  if (name.includes('道')) return '道';
+  // Check for specialized highway types first
+  // Exceptions for specific National Highway branches/rings
+  const highwayExceptions = /桃園環線|機場支線|台中環線|台南支線|高雄支線/;
+  
+  if (/(?:國道|高速公路)/.test(name) || highwayExceptions.test(name)) return '高速公路';
+  if (/(?:省道|縣道|市道|快速道路|快速公路|台\d+線|縣\d+線)/.test(name)) return '快速道路';
+
+  // Use regex to check for suffixes, accounting for optional section numbers like "一段"
+  if (/(?:大道)(?:\d+段|第\d+段|.[段])?$/.test(name)) return '大道';
+  if (/(?:街)(?:\d+段|第\d+段|.[段])?$/.test(name)) return '街';
+  if (/(?:路)(?:\d+段|第\d+段|.[段])?$/.test(name)) return '路';
+  if (/(?:橋)$/.test(name)) return '橋';
+  if (/(?:地下道)$/.test(name)) return '地下道';
   return 'other';
 }
 
 export async function fetchRoadsForRegion(osmRelationId: number): Promise<RoadFeature[]> {
   const query = `
 [out:json][timeout:90];
-rel(${osmRelationId});
-map_to_area->.searchArea;
+area(${3600000000 + osmRelationId})->.searchArea;
 (
-  way["highway"]["name"~"路|街|道|段"](area.searchArea);
+  way["highway"]["name"~"路|街|道|橋|地下道"](area.searchArea);
 );
 out geom;
   `.trim();

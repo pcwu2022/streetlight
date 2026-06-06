@@ -25,12 +25,12 @@ export function isMainRoad(roadName: string): boolean {
   const excludeKeywords = [
     '巷', '弄', '衖',               // 基礎毛細道路
     '自行車道', '單車道', '鐵馬道',    // 休閒專用道
-    '地下道', '車行地下道',          // 特定立體交叉結構
     '匝道', '聯絡道', '交流道',       // 高快公路的銜接/分支結構
     '便道', '替代道路',             // 臨時或輔助道路
     '步道', '健行道', '登山步道',     // 人行專用
-    '高架橋', '高架道路',            // 排除單純的橋樑名稱（除非是市民大道高架段，但那通常歸在市民大道）
-    '防汛道路', '產業道路'           // 特定功能性非都市道路
+    '高架道路',                     // 排除單純的高架道路（除非是名為xx橋，我們下面會處理）
+    '防汛道路', '產業道路',          // 特定功能性非都市道路
+    '地下街'                        // 排除地下街
   ];
 
   const hasInvalidKeyword = excludeKeywords.some(keyword => trimmedName.includes(keyword));
@@ -42,7 +42,7 @@ export function isMainRoad(roadName: string): boolean {
   // 匹配群組說明：
   // - (?:...段)? : 允許結尾帶有「段」或「幾路幾段」
   // - (國道|省道|縣道|市道|快速道路|快速公路)... : 允許公路主線系統
-  const mainRoadRegex = /^(?:.*(?:路|街|大道)(?:\d+段|第\d+段|.[段])?|(?:國道|省道|縣道|市道|快速道路|快速公路|快速道路|台\d+線|縣\d+線).*[號線]?)$/;
+  const mainRoadRegex = /^(?:.*(?:路|街|大道|橋|地下道)(?:\d+段|第\d+段|.[段])?|(?:國道|省道|縣道|市道|快速道路|快速公路|快速道路|台\d+線|縣\d+線).*[號線]?)$/;
 
   return mainRoadRegex.test(trimmedName);
 }
@@ -85,8 +85,10 @@ export function computeStats(roads: RoadFeature[], foundNames: Set<string>, rece
       '路': { total: 0, found: 0 },
       '街': { total: 0, found: 0 },
       '大道': { total: 0, found: 0 },
-      '大路': { total: 0, found: 0 },
-      '道': { total: 0, found: 0 },
+      '高速公路': { total: 0, found: 0 },
+      '快速道路': { total: 0, found: 0 },
+      '橋': { total: 0, found: 0 },
+      '地下道': { total: 0, found: 0 },
       'other': { total: 0, found: 0 },
     },
     longestFound: null,
@@ -111,14 +113,17 @@ export function computeStats(roads: RoadFeature[], foundNames: Set<string>, rece
   stats.total = nameToLength.size;
 
   for (const [name, length] of nameToLength.entries()) {
-    const type = nameToType.get(name)!;
+    const type = nameToType.get(name) || 'other';
+    // Fallback if the type was deprecated or is otherwise missing from the stats map
+    const targetType = stats.byType[type] ? type : 'other';
+    
     stats.totalKm += length;
-    stats.byType[type].total += 1;
+    stats.byType[targetType].total += 1;
 
     if (foundNames.has(name)) {
       stats.found += 1;
       stats.foundKm += length;
-      stats.byType[type].found += 1;
+      stats.byType[targetType].found += 1;
 
       if (!stats.longestFound || length > stats.longestFound.km) {
         stats.longestFound = { name, km: length };
