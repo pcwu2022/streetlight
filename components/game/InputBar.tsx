@@ -13,8 +13,8 @@ interface Props {
 export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<'none' | 'success' | 'error'>('none');
+  const [isComposing, setIsComposing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -30,12 +30,24 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
   }, []);
 
   const checkMatch = useCallback((val: string) => {
+    if (isComposing) return;
+    
     const normalizedVal = normalizeRoadName(val);
-    if (normalizedVal.length < 2) return;
+    if (normalizedVal.length < 2) {
+      if (inputRef.current) {
+        inputRef.current.classList.add('animate-shake');
+        setTimeout(() => inputRef.current?.classList.remove('animate-shake'), 400);
+      }
+      addToast('請輸入至少兩個字以進行匹配', 'warning');
+      return;
+    }
 
     // Anti-cheat: Ignore pure reserved keywords/types
     const reservedWords = new Set(['路', '街', '大道', '橋', '地下道', '高速公路', '快速道路', '快速公路', '國道', '環線', '支線', '省道', '縣道', '市道', '大道一段', '大道二段', '大道三段', '大道四段', '大道五段', '大道六段', '大道七段', '大道八段', '大道九段', '大道十段']);
-    if (reservedWords.has(normalizedVal)) return;
+    if (reservedWords.has(normalizedVal)) {
+      addToast('請輸入具體的道路名稱，不能僅輸入類型', 'warning');
+      return;
+    }
 
     const allMatches = roads.filter(r => r.name.startsWith(normalizedVal));
     const unfoundMatches = allMatches.filter(r => !foundRoads.has(r.name));
@@ -43,84 +55,72 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
     if (unfoundMatches.length > 0) {
       const uniqueNames = Array.from(new Set(unfoundMatches.map(r => r.name)));
       onRoadsFound(uniqueNames);
-      setInput('');
       setStatus('success');
-      setTimeout(() => setStatus('none'), 500);
+      setTimeout(() => {
+        setStatus('none');
+        setInput('');
+      }, 500);
     } else if (allMatches.length > 0) {
       const exactMatch = allMatches.find(r => r.name === normalizedVal);
       if (exactMatch) {
         addToast(`「${exactMatch.name}」已經點亮了！`, 'warning');
         setInput('');
       } else {
-        // If there are matches but all were found, still clear for better UX
-        // setInput(''); 
+        // If there are partial matches but all found, still show error-like feedback but with hint
+        addToast(`包含「${normalizedVal}」的道路皆已找齊`, 'warning');
+        setStatus('error');
+        setTimeout(() => setStatus('none'), 500);
       }
     } else {
       // No matches at all
       setStatus('error');
-      setTimeout(() => setStatus('none'), 500);
+      if (inputRef.current) {
+        inputRef.current.classList.add('animate-shake');
+        setTimeout(() => inputRef.current?.classList.remove('animate-shake'), 400);
+      }
+      addToast(`找不到以「${normalizedVal}」開頭的道路`, 'error');
+      setTimeout(() => {
+        setStatus('none');
+      }, 500);
     }
-  }, [roads, foundRoads, onRoadsFound, addToast]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setInput(val);
-
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    
-    if (normalizeRoadName(val).length >= 2) {
-      timeoutRef.current = setTimeout(() => {
-        checkMatch(val);
-      }, 300); // 300ms delay
-    }
-  };
+  }, [roads, foundRoads, onRoadsFound, addToast, isComposing]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isComposing) {
       e.preventDefault();
-      const normalizedInput = normalizeRoadName(input);
-      if (normalizedInput.length > 0 && normalizedInput.length < 2) {
-        // If user presses enter on 1 char, they might be trying to submit, but we need 2 chars or exact match.
-        // Let's just check for exact match anyway on enter.
-        const exactMatch = roads.find(r => r.name === normalizedInput);
-        if (exactMatch) {
-          if (!foundRoads.has(exactMatch.name)) {
-            onRoadsFound([exactMatch.name]);
-            setInput('');
-          } else {
-            addToast(`「${exactMatch.name}」已找到過了！`, 'warning');
-            setInput('');
-          }
-          return;
-        }
-      }
-      
-      if (input.trim()) {
-        if (inputRef.current) {
-          inputRef.current.classList.add('animate-shake');
-          setTimeout(() => inputRef.current?.classList.remove('animate-shake'), 400);
-        }
-        addToast(`找不到包含「${input.trim()}」的道路`, 'error');
-      }
+      checkMatch(input);
     }
   };
 
   return (
     <div className="absolute bottom-0 left-0 w-full p-4 md:p-6 pointer-events-none flex justify-center">
-      <div className="w-full max-w-2xl relative pointer-events-auto">
+      <div className="w-full max-w-2xl relative pointer-events-auto flex items-center group">
         <input 
           ref={inputRef}
           type="text" 
           value={input}
-          onChange={handleChange}
+          onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="輸入路名…" 
-          className={`w-full p-3 md:p-4 bg-surface border-2 outline-none rounded-xl text-lg md:text-xl font-sans shadow-xl text-text-primary placeholder-text-muted/50 transition-all duration-300 ${
+          onCompositionStart={() => setIsComposing(true)}
+          onCompositionEnd={() => setIsComposing(false)}
+          placeholder="輸入路名並按下 Enter…" 
+          className={`w-full p-3 md:p-4 pr-14 md:pr-16 bg-surface border-2 outline-none rounded-2xl text-lg md:text-xl font-sans shadow-2xl text-text-primary placeholder-text-muted/50 transition-all duration-300 ${
             status === 'success' ? 'border-green-500 scale-[1.02]' : 
             status === 'error' ? 'border-red-500' : 
-            'border-border focus:border-cyan'
+            'border-border focus:border-cyan hover:border-cyan/50'
           }`}
         />
+        <button 
+          onClick={() => checkMatch(input)}
+          className={`absolute right-3 p-2 md:p-3 rounded-xl transition-all duration-300 ${
+            input.length >= 2 ? 'bg-cyan text-bg scale-100 opacity-100' : 'bg-border text-text-muted scale-90 opacity-50'
+          } hover:scale-110 active:scale-95`}
+          title="搜尋 (Enter)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
       </div>
     </div>
   );
