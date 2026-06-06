@@ -2,4 +2,4 @@
 :HL["/streetlight/_next/static/chunks/33r2brirzsnxh.css","style"]
 :HL["/streetlight/_next/static/chunks/2nfu-bom5k72c.css","style"]
 :HC["/",""]
-0:{"tree":{"name":"","param":null,"prefetchHints":24,"slots":{"children":{"name":"game","param":null,"prefetchHints":8,"slots":{"children":{"name":"regionId","param":{"type":"d","key":"nantou-county","siblings":null},"prefetchHints":4,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"NxNKLJLm8z9AVL2r5IIE7"}
+0:{"tree":{"name":"","param":null,"prefetchHints":24,"slots":{"children":{"name":"game","param":null,"prefetchHints":8,"slots":{"children":{"name":"regionId","param":{"type":"d","key":"nantou-county","siblings":null},"prefetchHints":4,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"bIb06KbxdsQP_zQ0v22h3"}
