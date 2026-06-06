@@ -31,7 +31,7 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
 
   const checkMatch = useCallback((val: string) => {
     if (isComposing) return;
-    
+
     const normalizedVal = normalizeRoadName(val);
     if (normalizedVal.length < 2) {
       if (inputRef.current) {
@@ -59,7 +59,7 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
       setTimeout(() => {
         setStatus('none');
         setInput('');
-      }, 500);
+      }, 200);
     } else if (allMatches.length > 0) {
       const exactMatch = allMatches.find(r => r.name === normalizedVal);
       if (exactMatch) {
@@ -69,7 +69,7 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
         // If there are partial matches but all found, still show error-like feedback but with hint
         addToast(`包含「${normalizedVal}」的道路皆已找齊`, 'warning');
         setStatus('error');
-        setTimeout(() => setStatus('none'), 500);
+        setTimeout(() => setStatus('none'), 200);
       }
     } else {
       // No matches at all
@@ -81,7 +81,7 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
       addToast(`找不到以「${normalizedVal}」開頭的道路`, 'error');
       setTimeout(() => {
         setStatus('none');
-      }, 500);
+      }, 200);
     }
   }, [roads, foundRoads, onRoadsFound, addToast, isComposing]);
 
@@ -95,26 +95,24 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
   return (
     <div className="absolute bottom-0 left-0 w-full p-4 md:p-6 pointer-events-none flex justify-center">
       <div className="w-full max-w-2xl relative pointer-events-auto flex items-center group">
-        <input 
+        <input
           ref={inputRef}
-          type="text" 
+          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => setIsComposing(false)}
-          placeholder="輸入路名並按下 Enter…" 
-          className={`w-full p-3 md:p-4 pr-14 md:pr-16 bg-surface border-2 outline-none rounded-2xl text-lg md:text-xl font-sans shadow-2xl text-text-primary placeholder-text-muted/50 transition-all duration-300 ${
-            status === 'success' ? 'border-green-500 scale-[1.02]' : 
-            status === 'error' ? 'border-red-500' : 
-            'border-border focus:border-cyan hover:border-cyan/50'
-          }`}
+          placeholder="輸入路名並按下 Enter…"
+          className={`w-full p-3 md:p-4 pr-14 md:pr-16 bg-surface border-2 outline-none rounded-2xl text-lg md:text-xl font-sans shadow-2xl text-text-primary placeholder-text-muted/50 transition-all duration-300 ${status === 'success' ? 'border-green-500 scale-[1.02]' :
+            status === 'error' ? 'border-red-500' :
+              'border-border focus:border-cyan hover:border-cyan/50'
+            }`}
         />
-        <button 
+        <button
           onClick={() => checkMatch(input)}
-          className={`absolute right-3 p-2 md:p-3 rounded-xl transition-all duration-300 ${
-            input.length >= 2 ? 'bg-cyan text-bg scale-100 opacity-100' : 'bg-border text-text-muted scale-90 opacity-50'
-          } hover:scale-110 active:scale-95`}
+          className={`absolute right-3 p-2 md:p-3 rounded-xl transition-all duration-300 ${input.length >= 2 ? 'bg-cyan text-bg scale-100 opacity-100' : 'bg-border text-text-muted scale-90 opacity-50'
+            } hover:scale-110 active:scale-95`}
           title="搜尋 (Enter)"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
