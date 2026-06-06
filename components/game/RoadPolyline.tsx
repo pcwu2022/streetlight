@@ -12,7 +12,7 @@ interface Props {
 export const RoadPolyline = memo(({ road, isFound, isHovered, projectedPoints, onHover }: Props) => {
   const pointsStr = projectedPoints.map(p => `${p[0]},${p[1]}`).join(' ');
 
-  let strokeColor = 'var(--color-border)';
+  let strokeColor = 'var(--road-unfound)';
   let filter = 'none';
 
   if (isFound) {

@@ -51,8 +51,10 @@ export function MapCanvas({ roads, foundRoads, onRoadHover, resetZoomTrigger }: 
     ctx.clearRect(0, 0, SVG_WIDTH, SVG_HEIGHT);
     
     // Setup styles for unfound roads
-    ctx.strokeStyle = '#2a3d5a'; // Slightly brighter than background
-    ctx.lineWidth = 0.8;
+    // Setup styles for unfound roads
+    // We can use CSS variables in strokeStyle if we use a helper or just a solid color
+    ctx.strokeStyle = '#4b5e8d'; // Explicit lighter color for canvas
+    ctx.lineWidth = 1.0;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -86,7 +88,7 @@ export function MapCanvas({ roads, foundRoads, onRoadHover, resetZoomTrigger }: 
     
     setScale(prev => {
       const newScale = direction > 0 ? prev * zoomFactor : prev / zoomFactor;
-      return Math.max(0.5, Math.min(newScale, 20));
+      return Math.max(0.3, Math.min(newScale, 30));
     });
   };
 
@@ -132,7 +134,7 @@ export function MapCanvas({ roads, foundRoads, onRoadHover, resetZoomTrigger }: 
             ref={canvasRef}
             width={SVG_WIDTH} 
             height={SVG_HEIGHT}
-            className="absolute inset-0 pointer-events-none opacity-40 shadow-2xl"
+            className="absolute inset-0 pointer-events-none shadow-2xl"
           />
           <svg 
             viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
