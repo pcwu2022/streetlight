@@ -33,7 +33,11 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
     const normalizedVal = normalizeRoadName(val);
     if (normalizedVal.length < 2) return;
 
-    const allMatches = roads.filter(r => r.name.includes(normalizedVal));
+    // Anti-cheat: Ignore pure reserved keywords/types
+    const reservedWords = new Set(['路', '街', '大道', '橋', '地下道', '高速公路', '快速道路', '快速公路', '國道', '環線', '支線', '省道', '縣道', '市道', '大道一段', '大道二段', '大道三段', '大道四段', '大道五段', '大道六段', '大道七段', '大道八段', '大道九段', '大道十段']);
+    if (reservedWords.has(normalizedVal)) return;
+
+    const allMatches = roads.filter(r => r.name.startsWith(normalizedVal));
     const unfoundMatches = allMatches.filter(r => !foundRoads.has(r.name));
 
     if (unfoundMatches.length > 0) {
@@ -45,8 +49,11 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
     } else if (allMatches.length > 0) {
       const exactMatch = allMatches.find(r => r.name === normalizedVal);
       if (exactMatch) {
-        addToast(`「${exactMatch.name}」已經點亮了！項目`, 'warning');
+        addToast(`「${exactMatch.name}」已經點亮了！`, 'warning');
         setInput('');
+      } else {
+        // If there are matches but all were found, still clear for better UX
+        // setInput(''); 
       }
     } else {
       // No matches at all
