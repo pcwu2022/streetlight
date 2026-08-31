@@ -1,0 +1,154 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { getRegionDisplayName, getRegionsForLocale, isLocale, REGIONS } from '../../lib/regions';
+import { deleteGame, listGames } from '../../lib/storage';
+import { GameLocale, GameSave } from '../../types';
+import { RegionCard } from './RegionCard';
+import { Modal } from '../ui/Modal';
+
+export function LocaleRegionBrowser({ locale: initialLocale }: { locale: GameLocale }) {
+  const [locale, setLocale] = useState<GameLocale>(initialLocale);
+  const [saves, setSaves] = useState<GameSave[]>([]);
+  const [search, setSearch] = useState('');
+  const [resetTarget, setResetTarget] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    const pathLocale = window.location.pathname.split('/')[1];
+    const resolvedLocale = isLocale(pathLocale) ? pathLocale : initialLocale;
+    setLocale(resolvedLocale);
+    setSaves(listGames());
+  }, [initialLocale]);
+
+  const regions = getRegionsForLocale(locale);
+
+  const handleReset = (regionId: string) => {
+    deleteGame(regionId);
+    setSaves(listGames());
+    setResetTarget(null);
+  };
+
+  const filteredRegions = search
+    ? regions.filter(r => getRegionDisplayName(r, locale).toLowerCase().includes(search.toLowerCase()))
+    : regions;
+
+  const showDropdown = isFocused || search.length > 0;
+
+  return (
+    <main className="flex-1 flex flex-col items-center justify-start p-8 relative min-h-screen">
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,var(--color-border)_1px,transparent_1.5px)] bg-[size:24px_24px] pointer-events-none -z-10" />
+
+      <header className="mt-16 mb-12 text-center">
+        <h1 className="text-5xl md:text-7xl font-serif text-cyan font-bold tracking-widest drop-shadow-[0_0_15px_rgba(0,229,255,0.4)]">
+          {locale === 'tw' ? '路名記憶' : 'Streetlight'}
+        </h1>
+        <p className="mt-4 text-text-muted text-lg font-mono tracking-widest">
+          {locale === 'tw' ? '你還記得幾條路？' : 'How many streets do you remember?'}
+        </p>
+      </header>
+
+      <div className="w-full max-w-lg mb-16 relative z-20">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+          placeholder={locale === 'tw' ? '輸入城市或地區…' : 'Search a city or area…'}
+          className="w-full p-4 bg-surface border-2 border-border focus:border-cyan outline-none rounded-xl text-lg font-sans transition-colors"
+        />
+        {showDropdown && (
+          <ul className="absolute top-full left-0 w-full mt-2 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto">
+            {search.length === 0 && (
+              <li className="p-3 bg-bg/50 text-xs font-mono text-text-muted border-b border-border">
+                {locale === 'tw' ? '建議區域' : 'Suggested regions'}
+              </li>
+            )}
+            {filteredRegions.length === 0 && (
+              <li className="p-4 text-text-muted text-center font-mono">
+                {locale === 'tw' ? '找不到相關區域' : 'No matching regions'}
+              </li>
+            )}
+            {filteredRegions.map(r => {
+              const hasSave = saves.some(s => s.regionId === r.id);
+              return (
+                <li key={r.id}>
+                  <Link
+                    href={`/${locale}/game/${r.id}`}
+                    className="flex justify-between items-center p-4 hover:bg-cyan/10 transition-colors border-b border-border last:border-0"
+                  >
+                    <span className="font-bold">{getRegionDisplayName(r, locale)}</span>
+                    {hasSave && (
+                      <span className="text-xs bg-amber px-2 py-1 rounded text-bg font-bold">
+                        {locale === 'tw' ? '繼續' : 'Resume'}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div className="w-full max-w-5xl z-10">
+        <h2 className="text-2xl font-serif mb-6 text-text-muted border-b border-border pb-4">
+          {locale === 'tw' ? '遊戲紀錄' : 'Game history'}
+        </h2>
+
+        {saves.length === 0 ? (
+          <div className="text-center py-20 bg-surface/50 border border-border rounded-2xl border-dashed">
+            <div className="text-6xl mb-4 opacity-50">🗺️</div>
+            <p className="text-text-muted font-mono">
+              {locale === 'tw' ? '還沒有開始任何城市' : 'No city has been started yet'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {saves.map(save => {
+              const region = REGIONS.find(r => r.id === save.regionId);
+              if (!region) return null;
+              return (
+                <RegionCard
+                  key={save.regionId}
+                  region={region}
+                  save={save}
+                  onReset={() => setResetTarget(save.regionId)}
+                  locale={locale}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <Modal
+        isOpen={!!resetTarget}
+        onClose={() => setResetTarget(null)}
+        title={locale === 'tw' ? '重新開始？' : 'Reset progress?'}
+      >
+        <p className="mb-6 opacity-80">
+          {locale === 'tw'
+            ? '這將會清除您在這個城市所有的道路記憶進度，確定要繼續嗎？'
+            : 'This will erase all saved progress for this city. Continue?'}
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            className="px-4 py-2 border border-border text-text-muted rounded hover:text-white"
+            onClick={() => setResetTarget(null)}
+          >
+            {locale === 'tw' ? '取消' : 'Cancel'}
+          </button>
+          <button
+            className="px-4 py-2 bg-magenta text-white font-bold rounded hover:opacity-90"
+            onClick={() => resetTarget ? handleReset(resetTarget) : undefined}
+          >
+            {locale === 'tw' ? '確定清除' : 'Reset'}
+          </button>
+        </div>
+      </Modal>
+    </main>
+  );
+}

@@ -8,9 +8,10 @@ interface Props {
   roads: RoadFeature[];
   foundRoads: Set<string>;
   onRoadsFound: (names: string[]) => void;
+  locale?: 'tw' | 'en';
 }
 
-export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
+export function InputBar({ roads, foundRoads, onRoadsFound, locale = 'tw' }: Props) {
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<'none' | 'success' | 'error'>('none');
   const [isComposing, setIsComposing] = useState(false);
@@ -32,24 +33,37 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
   const checkMatch = useCallback((val: string) => {
     if (isComposing) return;
 
-    const normalizedVal = normalizeRoadName(val);
+    const normalizedVal = normalizeRoadName(val, locale);
     if (normalizedVal.length < 2) {
       if (inputRef.current) {
         inputRef.current.classList.add('animate-shake');
         setTimeout(() => inputRef.current?.classList.remove('animate-shake'), 400);
       }
-      addToast('請輸入至少兩個字以進行匹配', 'warning');
+      addToast(locale === 'en' ? 'Type at least two letters to match.' : '請輸入至少兩個字以進行匹配', 'warning');
       return;
     }
 
-    // Anti-cheat: Ignore pure reserved keywords/types
-    const reservedWords = new Set(['路', '街', '大道', '橋', '地下道', '隧道', '高速公路', '快速道路', '快速公路', '國道', '環線', '支線', '省道', '縣道', '市道', '大道一段', '大道二段', '大道三段', '大道四段', '大道五段', '大道六段', '大道七段', '大道八段', '大道九段', '大道十段']);
-    if (reservedWords.has(normalizedVal)) {
-      addToast('請輸入具體的道路名稱，不能僅輸入類型', 'warning');
+    const reservedWords = locale === 'en'
+      ? new Set(['avenue', 'street', 'road', 'boulevard', 'drive', 'lane', 'place', 'way', 'court', 'circle', 'square', 'terrace', 'parkway', 'st', 'rd', 'ave', 'blvd'])
+      : new Set(['路', '街', '大道', '橋', '地下道', '隧道', '高速公路', '快速道路', '快速公路', '國道', '環線', '支線', '省道', '縣道', '市道', '大道一段', '大道二段', '大道三段', '大道四段', '大道五段', '大道六段', '大道七段', '大道八段', '大道九段', '大道十段']);
+    if (reservedWords.has(normalizedVal.toLowerCase())) {
+      addToast(locale === 'en' ? 'Please enter a specific street name.' : '請輸入具體的道路名稱，不能僅輸入類型', 'warning');
       return;
     }
 
-    const allMatches = roads.filter(r => r.name.startsWith(normalizedVal));
+    const allMatches = roads.filter(r => {
+      const target = normalizeRoadName(r.name, locale).toLowerCase();
+      const inputValue = normalizedVal.toLowerCase();
+      if (locale === 'en') {
+        return target === inputValue ||
+          target.startsWith(`${inputValue} `) ||
+          target.startsWith(`${inputValue}-`) ||
+          target.includes(` ${inputValue} `) ||
+          target.includes(`-${inputValue} `) ||
+          target.includes(`/${inputValue} `);
+      }
+      return target.startsWith(inputValue);
+    });
     const unfoundMatches = allMatches.filter(r => !foundRoads.has(r.name));
 
     if (unfoundMatches.length > 0) {
@@ -61,29 +75,25 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
         setInput('');
       }, 200);
     } else if (allMatches.length > 0) {
-      const exactMatch = allMatches.find(r => r.name === normalizedVal);
+      const exactMatch = allMatches.find(r => normalizeRoadName(r.name, locale).toLowerCase() === normalizedVal.toLowerCase());
       if (exactMatch) {
-        addToast(`「${exactMatch.name}」已經點亮了！`, 'warning');
+        addToast(locale === 'en' ? `"${exactMatch.name}" is already lit.` : `「${exactMatch.name}」已經點亮了！`, 'warning');
         setInput('');
       } else {
-        // If there are partial matches but all found, still show error-like feedback but with hint
-        addToast(`包含「${normalizedVal}」的道路皆已找齊`, 'warning');
+        addToast(locale === 'en' ? `All roads containing "${normalizedVal}" are already found.` : `包含「${normalizedVal}」的道路皆已找齊`, 'warning');
         setStatus('error');
         setTimeout(() => setStatus('none'), 200);
       }
     } else {
-      // No matches at all
       setStatus('error');
       if (inputRef.current) {
         inputRef.current.classList.add('animate-shake');
         setTimeout(() => inputRef.current?.classList.remove('animate-shake'), 400);
       }
-      addToast(`找不到以「${normalizedVal}」開頭的道路`, 'error');
-      setTimeout(() => {
-        setStatus('none');
-      }, 200);
+      addToast(locale === 'en' ? `No road matches "${normalizedVal}".` : `找不到以「${normalizedVal}」開頭的道路`, 'error');
+      setTimeout(() => setStatus('none'), 200);
     }
-  }, [roads, foundRoads, onRoadsFound, addToast, isComposing]);
+  }, [roads, foundRoads, onRoadsFound, addToast, isComposing, locale]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !isComposing) {
@@ -103,7 +113,7 @@ export function InputBar({ roads, foundRoads, onRoadsFound }: Props) {
           onKeyDown={handleKeyDown}
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => setIsComposing(false)}
-          placeholder="輸入路名並按下 Enter…"
+          placeholder={locale === 'en' ? 'Type a street name and press Enter…' : '輸入路名並按下 Enter…'}
           className={`w-full p-3 md:p-4 pr-14 md:pr-16 bg-surface border-2 outline-none rounded-2xl text-lg md:text-xl font-sans shadow-2xl text-text-primary placeholder-text-muted/50 transition-all duration-300 ${status === 'success' ? 'border-green-500 scale-[1.02]' :
             status === 'error' ? 'border-red-500' :
               'border-border focus:border-cyan hover:border-cyan/50'

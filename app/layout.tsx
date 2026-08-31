@@ -6,7 +6,7 @@ import './globals.css';
 import { ToastProvider } from '../components/ui/Toast';
 
 export const metadata: Metadata = {
-  title: '路名記憶 | Streetlight',
+  title: 'Streetlight',
   description: '記憶並點亮台灣城市街道的遊戲',
   openGraph: {
     title: '路名記憶 | Streetlight',
@@ -20,8 +20,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-TW" className="h-full antialiased font-sans">
-      <body className="min-h-full h-full flex flex-col bg-bg text-text-primary overflow-x-hidden font-sans pt-0 m-0">
+    <html lang="zh-TW" className="h-full antialiased font-sans" suppressHydrationWarning>
+      <body
+        className="min-h-full h-full flex flex-col bg-bg text-text-primary overflow-x-hidden font-sans pt-0 m-0"
+        suppressHydrationWarning
+      >
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

@@ -1,0 +1,11 @@
+{
+  "fetchedAt": "2026-08-31T19:05:01Z",
+  "regions": [
+    {
+      "id": "pittsburgh",
+      "name": "Pittsburgh",
+      "roadCount": 13000,
+      "file": "data/roads/pittsburgh.json"
+    }
+  ]
+}

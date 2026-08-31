@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { fetchRoadsForRegion } from '../../lib/overpass';
-import { loadOsmCache, saveOsmCache, loadGame, saveGame, clearLegacyStorage } from '../../lib/storage';
+import { loadOsmCache, saveOsmCache, loadGame, saveGame, clearLegacyStorage, isValidOsmCache } from '../../lib/storage';
 import { RoadFeature, GameSave, Region } from '../../types';
 import { computeStats, isMainRoad } from '../../lib/roadUtils';
+import { getRegionDisplayName } from '../../lib/regions';
 import { MapCanvas } from './MapCanvas';
 import { Sidebar } from './Sidebar';
 import { InputBar } from './InputBar';
@@ -29,7 +30,7 @@ export function GameClient({ regionId, region }: GameClientProps) {
 
   useEffect(() => {
     if (!region) {
-      setError('找不到該地區');
+      setError('Region not found');
       setIsLoading(false);
       return;
     }
@@ -42,14 +43,18 @@ export function GameClient({ regionId, region }: GameClientProps) {
         const cache = await loadOsmCache(regionId);
         let fetchedRoads: RoadFeature[];
 
-        if (cache) {
+        if (cache && isValidOsmCache(cache)) {
           fetchedRoads = cache.roads;
         } else {
-          fetchedRoads = await fetchRoadsForRegion(region!.osmRelationId);
+          const locale = region?.locale ?? 'tw';
+          fetchedRoads = await fetchRoadsForRegion(region!.osmRelationId, locale);
+          if (!Array.isArray(fetchedRoads) || fetchedRoads.length === 0) {
+            throw new Error(region?.locale === 'en' ? 'No roads were returned for this region.' : '這個區域沒有可載入的道路資料。');
+          }
           await saveOsmCache(regionId, { fetchedAt: new Date().toISOString(), roads: fetchedRoads });
         }
 
-        setRoads(fetchedRoads.filter(r => isMainRoad(r.name)));
+        setRoads(fetchedRoads.filter(r => isMainRoad(r.name, region?.locale ?? 'tw')));
 
         const save = loadGame(regionId);
         if (save) {
@@ -59,7 +64,7 @@ export function GameClient({ regionId, region }: GameClientProps) {
 
       } catch (err: any) {
         console.error(err);
-        setError(err.message || '載入失敗');
+        setError(err.message || (region?.locale === 'en' ? 'Load failed' : '載入失敗'));
       } finally {
         setIsLoading(false);
       }
@@ -74,7 +79,7 @@ export function GameClient({ regionId, region }: GameClientProps) {
     // Auto-save
     const save: GameSave = {
       regionId,
-      regionName: region.nameZh,
+      regionName: getRegionDisplayName(region, region.locale),
       foundRoads: Array.from(foundNames),
       startedAt: loadGame(regionId)?.startedAt || new Date().toISOString(),
       lastPlayedAt: new Date().toISOString(),
@@ -83,7 +88,7 @@ export function GameClient({ regionId, region }: GameClientProps) {
     saveGame(save);
   }, [foundNames, isLoading, error, region, regionId, roads]);
 
-  const stats = useMemo(() => computeStats(roads, foundNames, recentHistory), [roads, foundNames, recentHistory]);
+  const stats = useMemo(() => computeStats(roads, foundNames, recentHistory, region?.locale ?? 'tw'), [roads, foundNames, recentHistory, region]);
 
   const handleRoadsFound = useCallback((names: string[]) => {
     if (names.length === 0) return;
@@ -97,19 +102,19 @@ export function GameClient({ regionId, region }: GameClientProps) {
       return combined.slice(-5);
     });
     if (names.length === 1) {
-      addToast(`點亮「${names[0]}」！`, 'success');
+      addToast(region?.locale === 'en' ? `Lit up "${names[0]}"!` : `點亮「${names[0]}」！`, 'success');
     } else {
-      addToast(`同時點亮了 ${names.length} 條包含此名稱的道路！`, 'success');
+      addToast(region?.locale === 'en' ? `Lit up ${names.length} roads containing this name!` : `同時點亮了 ${names.length} 條包含此名稱的道路！`, 'success');
     }
-  }, [addToast]);
+  }, [addToast, region?.locale]);
 
   if (error) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 min-h-screen">
-        <h2 className="text-xl text-magenta mb-4">無法載入資料</h2>
+        <h2 className="text-xl text-magenta mb-4">{region?.locale === 'en' ? 'Unable to load data' : '無法載入資料'}</h2>
         <p className="text-text-muted mb-6">{error}</p>
-        <Link href="/" className="px-4 py-2 border border-border rounded hover:bg-surface">
-          返回首頁
+        <Link href={region?.locale === 'en' ? '/en' : '/tw'} className="px-4 py-2 border border-border rounded hover:bg-surface">
+          {region?.locale === 'en' ? 'Back to home' : '返回首頁'}
         </Link>
       </div>
     );
@@ -120,7 +125,7 @@ export function GameClient({ regionId, region }: GameClientProps) {
       <div className="flex-1 flex flex-col items-center justify-center bg-bg relative min-h-screen">
         <div className="text-4xl animate-pulse delay-75 mb-6 text-cyan">🗺️</div>
         <div className="text-xl font-mono text-cyan animate-pulse">
-          正在載入道路資料…
+          {region?.locale === 'en' ? 'Loading road data…' : '正在載入道路資料…'}
         </div>
       </div>
     );
@@ -130,10 +135,10 @@ export function GameClient({ regionId, region }: GameClientProps) {
     <div className="flex flex-col h-screen w-full overflow-hidden relative bg-bg">
       <header className="h-14 border-b border-border flex items-center px-4 shrink-0 bg-surface z-10 justify-between">
         <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
-          <Link href="/" className="text-text-muted hover:text-cyan transition-colors" title="返回">
+          <Link href={region?.locale === 'en' ? '/en' : '/tw'} className="text-text-muted hover:text-cyan transition-colors" title={region?.locale === 'en' ? 'Back' : '返回'}>
             ←
           </Link>
-          <h1 className="text-base md:text-lg font-serif font-bold text-cyan truncate">{region?.nameZh}</h1>
+          <h1 className="text-base md:text-lg font-serif font-bold text-cyan truncate">{region ? getRegionDisplayName(region, region.locale) : ''}</h1>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
           <div className="text-xs md:text-sm font-mono text-text-muted bg-bg px-2 py-1 rounded">
@@ -143,14 +148,14 @@ export function GameClient({ regionId, region }: GameClientProps) {
             onClick={() => setResetZoomTrigger(prev => prev + 1)}
             className="text-xs md:text-sm text-text-muted hover:text-cyan border border-border px-2 py-1 rounded whitespace-nowrap"
           >
-            <span className="hidden md:inline">重置縮放</span>
-            <span className="md:hidden">重置</span>
+            <span className="hidden md:inline">{region?.locale === 'en' ? 'Reset zoom' : '重置縮放'}</span>
+            <span className="md:hidden">{region?.locale === 'en' ? 'Reset' : '重置'}</span>
           </button>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
-        <Sidebar stats={stats} />
+        <Sidebar stats={stats} locale={region?.locale ?? 'tw'} />
         
         <div className="flex-1 relative outline-none bg-bg m-0 p-0">
           <MapCanvas 
@@ -165,7 +170,8 @@ export function GameClient({ regionId, region }: GameClientProps) {
       <InputBar 
         roads={roads} 
         foundRoads={foundNames} 
-        onRoadsFound={handleRoadsFound} 
+        onRoadsFound={handleRoadsFound}
+        locale={region?.locale ?? 'tw'}
       />
 
       <Tooltip road={hoveredRoad} />

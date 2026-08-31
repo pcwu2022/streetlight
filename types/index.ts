@@ -1,4 +1,5 @@
-export type RoadType = '路' | '街' | '大道' | '高速公路' | '快速道路' | '橋' | '地下道' | '隧道' | 'other';
+export type GameLocale = 'tw' | 'en';
+export type RoadType = string;
 
 export interface RoadFeature {
   id: number;
@@ -23,8 +24,11 @@ export interface OsmCache {
 }
 
 export interface Region {
-  id: string;          // slugified, e.g. "hsinchu-city"
-  nameZh: string;      // e.g. "新竹市"
+  id: string;          // slugified, e.g. "hsinchu-city" or "london"
+  nameZh?: string;     // e.g. "新竹市"
+  nameEn?: string;     // e.g. "London"
+  name?: string;       // generic label for shared UI
   osmRelationId: number;
   type: 'city' | 'town' | 'district' | 'county';
+  locale: GameLocale;
 }

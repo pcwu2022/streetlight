@@ -97,6 +97,16 @@ export async function saveOsmCache(regionId: string, cache: OsmCache): Promise<v
   }
 }
 
+export function isValidOsmCache(cache: OsmCache | null | undefined): cache is OsmCache {
+  if (!cache || !Array.isArray(cache.roads) || cache.roads.length === 0) {
+    return false;
+  }
+
+  return cache.roads.every(road => {
+    return Boolean(road && typeof road.name === 'string' && Array.isArray(road.coordinates));
+  });
+}
+
 export async function loadOsmCache(regionId: string): Promise<OsmCache | null> {
   if (typeof window === 'undefined') return null;
   try {
@@ -107,11 +117,15 @@ export async function loadOsmCache(regionId: string): Promise<OsmCache | null> {
       const req = store.get(`osmData_v3_${regionId}`);
       req.onsuccess = () => {
         const cache = req.result as OsmCache | undefined;
-        if (!cache) return resolve(null);
-        
+        if (!cache || !isValidOsmCache(cache)) {
+          const delTx = db.transaction('osmCache', 'readwrite');
+          delTx.objectStore('osmCache').delete(`osmData_v3_${regionId}`);
+          return resolve(null);
+        }
+
         const cacheAge = new Date().getTime() - new Date(cache.fetchedAt).getTime();
         const sevenDays = 7 * 24 * 60 * 60 * 1000;
-        
+
         if (cacheAge > sevenDays) {
           const delTx = db.transaction('osmCache', 'readwrite');
           delTx.objectStore('osmCache').delete(`osmData_v3_${regionId}`);
