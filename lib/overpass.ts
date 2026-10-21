@@ -29,14 +29,76 @@ export function getRoadType(name: string, locale: GameLocale = 'tw'): RoadType {
   return 'other';
 }
 
-export async function fetchRoadsForRegion(osmRelationId: number, locale: GameLocale = 'tw'): Promise<RoadFeature[]> {
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+];
+
+interface OverpassData {
+  remark?: string;
+  elements: {
+    type: string;
+    id: number;
+    tags?: { name?: string };
+    geometry?: { lat: number; lon: number }[];
+  }[];
+}
+
+async function fetchOverpassData(query: string): Promise<OverpassData> {
+  const failures: string[] = [];
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    const controller = new AbortController();
+    // Allow the server's 90-second query timeout plus network overhead.
+    const timeout = setTimeout(() => controller.abort(), 100_000);
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`);
+      }
+      const data: OverpassData = await response.json();
+      // Overpass can return HTTP 200 with partial results and a runtime error.
+      if (data.remark) throw new Error(data.remark);
+      if (!Array.isArray(data.elements)) throw new Error('Invalid road data response');
+      return data;
+    } catch (error) {
+      const reason = controller.signal.aborted
+        ? 'Request timed out'
+        : error instanceof Error ? error.message : 'Request failed';
+      failures.push(`${new URL(endpoint).hostname}: ${reason}`);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw new Error(`Unable to load roads from Overpass. Please try again. (${failures.join('; ')})`);
+}
+
+// Share concurrent loads, including React development-mode effect replays.
+const pendingRequests = new Map<string, Promise<RoadFeature[]>>();
+
+export function fetchRoadsForRegion(osmRelationId: number, locale: GameLocale = 'tw'): Promise<RoadFeature[]> {
+  const key = `${osmRelationId}:${locale}`;
+  const pending = pendingRequests.get(key);
+  if (pending) return pending;
+  const request = loadRoadsForRegion(osmRelationId, locale).finally(() => {
+    pendingRequests.delete(key);
+  });
+  pendingRequests.set(key, request);
+  return request;
+}
+
+async function loadRoadsForRegion(osmRelationId: number, locale: GameLocale): Promise<RoadFeature[]> {
   const areaId = 3600000000 + osmRelationId;
   const query = locale === 'en'
     ? `
 [out:json][timeout:90];
 area(${areaId})->.searchArea;
 (
-  way["highway"]["name"~"Avenue|Ave|Road|Rd|Street|St|Boulevard|Blvd|Drive|Lane|Place|Parkway|Way|Court|Circle|Terrace|Square"](area.searchArea);
+  way["highway"]["name"](area.searchArea);
 );
 out geom;
   `.trim()
@@ -49,22 +111,14 @@ area(${areaId})->.searchArea;
 out geom;
   `.trim();
 
-  const response = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
-  });
-
-  if (!response.ok) throw new Error(`Overpass API error: ${response.statusText}`);
-
-  const data = await response.json();
+  const data = await fetchOverpassData(query);
   const roadsMap = new Map<string, RoadFeature>();
 
   for (const element of data.elements) {
     if (element.type !== 'way') continue;
 
-    const name: string = element.tags?.name;
-    if (!name || !isMainRoad(name, locale)) continue;
+    const name = element.tags?.name;
+    if (!name || !isMainRoad(name, locale) || !Array.isArray(element.geometry) || element.geometry.length < 2) continue;
 
     const coordinates: [number, number][] = element.geometry.map((g: { lat: number; lon: number }) => [g.lon, g.lat]);
     let lengthKm = 0;

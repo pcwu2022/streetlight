@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { fetchRoadsForRegion } from '../../lib/overpass';
 import { loadOsmCache, saveOsmCache, loadGame, saveGame, clearLegacyStorage, isValidOsmCache } from '../../lib/storage';
-import { RoadFeature, GameSave, Region } from '../../types';
+import { RoadFeature, GameSave, Region, GameLocale } from '../../types';
 import { computeStats, isMainRoad } from '../../lib/roadUtils';
 import { getRegionDisplayName } from '../../lib/regions';
 import { MapCanvas } from './MapCanvas';
@@ -18,6 +18,7 @@ interface GameClientProps {
 }
 
 export function GameClient({ regionId, region }: GameClientProps) {
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [roads, setRoads] = useState<RoadFeature[]>([]);
   const [foundNames, setFoundNames] = useState<Set<string>>(new Set());
   const [recentHistory, setRecentHistory] = useState<string[]>([]);
@@ -29,13 +30,19 @@ export function GameClient({ regionId, region }: GameClientProps) {
   const { addToast } = useToast();
 
   useEffect(() => {
-    if (!region) {
-      setError('Region not found');
-      setIsLoading(false);
-      return;
-    }
+    let active = true;
 
     async function loadData() {
+      // Defer state updates until this effect's async load begins.
+      await Promise.resolve();
+      if (!active) return;
+      setIsLoading(true);
+      setError(null);
+      if (!region) {
+        setError('Region not found');
+        setIsLoading(false);
+        return;
+      }
       try {
         // Clear old storage first
         await clearLegacyStorage();
@@ -54,6 +61,7 @@ export function GameClient({ regionId, region }: GameClientProps) {
           await saveOsmCache(regionId, { fetchedAt: new Date().toISOString(), roads: fetchedRoads });
         }
 
+        if (!active) return;
         setRoads(fetchedRoads.filter(r => isMainRoad(r.name, region?.locale ?? 'tw')));
 
         const save = loadGame(regionId);
@@ -62,16 +70,17 @@ export function GameClient({ regionId, region }: GameClientProps) {
           setRecentHistory(save.foundRoads.slice(-5));
         }
 
-      } catch (err: any) {
-        console.error(err);
-        setError(err.message || (region?.locale === 'en' ? 'Load failed' : '載入失敗'));
+      } catch (err: unknown) {
+        if (!active) return;
+        setError((err instanceof Error ? err.message : '') || (region?.locale === 'en' ? 'Load failed' : '載入失敗'));
       } finally {
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       }
     }
 
     loadData();
-  }, [region, regionId]);
+    return () => { active = false; };
+  }, [region, regionId, loadAttempt]);
 
   useEffect(() => {
     if (isLoading || error || !region) return;
@@ -113,6 +122,12 @@ export function GameClient({ regionId, region }: GameClientProps) {
       <div className="flex-1 flex flex-col items-center justify-center p-8 min-h-screen">
         <h2 className="text-xl text-magenta mb-4">{region?.locale === 'en' ? 'Unable to load data' : '無法載入資料'}</h2>
         <p className="text-text-muted mb-6">{error}</p>
+        <button
+          onClick={() => setLoadAttempt(attempt => attempt + 1)}
+          className="px-4 py-2 mb-4 border border-border rounded hover:bg-surface"
+        >
+          {region?.locale === 'en' ? 'Try again' : '重試'}
+        </button>
         <Link href={region?.locale === 'en' ? '/en' : '/tw'} className="px-4 py-2 border border-border rounded hover:bg-surface">
           {region?.locale === 'en' ? 'Back to home' : '返回首頁'}
         </Link>
@@ -121,14 +136,7 @@ export function GameClient({ regionId, region }: GameClientProps) {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-bg relative min-h-screen">
-        <div className="text-4xl animate-pulse delay-75 mb-6 text-cyan">🗺️</div>
-        <div className="text-xl font-mono text-cyan animate-pulse">
-          {region?.locale === 'en' ? 'Loading road data…' : '正在載入道路資料…'}
-        </div>
-      </div>
-    );
+    return <RoadLoadingProgress key={`${regionId}:${loadAttempt}`} locale={region?.locale ?? 'tw'} />;
   }
 
   return (
@@ -175,6 +183,60 @@ export function GameClient({ regionId, region }: GameClientProps) {
       />
 
       <Tooltip road={hoveredRoad} />
+    </div>
+  );
+}
+
+// Overpass does not report query progress; this is a time-based estimate.
+const ESTIMATED_LOAD_SECONDS = 30;
+
+function RoadLoadingProgress({ locale }: { locale: GameLocale }) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const progress = Math.min(95, Math.round((elapsedSeconds / ESTIMATED_LOAD_SECONDS) * 100));
+  const remaining = Math.max(0, ESTIMATED_LOAD_SECONDS - elapsedSeconds);
+  const isEnglish = locale === 'en';
+  const estimate = remaining > 0
+    ? (isEnglish ? `About ${remaining}s remaining` : `預估還需 ${remaining} 秒`)
+    : (isEnglish ? 'Taking longer than estimated. Still loading…' : '載入時間超出預估，仍在載入中…');
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center bg-bg relative min-h-screen px-6">
+      <div className="text-4xl animate-pulse delay-75 mb-6 text-cyan" aria-hidden="true">🗺️</div>
+      <h2 id="road-loading-label" className="text-xl font-mono text-cyan animate-pulse">
+        {isEnglish ? 'Loading road data…' : '正在載入道路資料…'}
+      </h2>
+      <div className="w-full max-w-xs mt-6">
+        <div
+          role="progressbar"
+          aria-labelledby="road-loading-label"
+          aria-describedby="road-loading-estimate"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          aria-valuetext={isEnglish ? `Estimated progress: ${progress}%` : `預估進度：${progress}%`}
+          className="h-2 overflow-hidden rounded-full bg-surface border border-border"
+        >
+          <div
+            className="h-full rounded-full bg-cyan transition-[width] duration-1000 ease-linear motion-reduce:transition-none"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p id="road-loading-estimate" className="mt-3 text-sm text-text-muted text-center">
+          {estimate}
+        </p>
+        <p className="mt-2 text-xs text-text-muted text-center">
+          {isEnglish ? `Elapsed: ${elapsedSeconds}s · Time is approximate` : `已等待 ${elapsedSeconds} 秒・時間僅供參考`}
+        </p>
+      </div>
     </div>
   );
 }

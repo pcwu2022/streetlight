@@ -43,7 +43,7 @@ def fetch_region_data(region, delay_seconds=8.0, endpoint="https://overpass-api.
 [out:json][timeout:90];
 area({area_id})->.searchArea;
 (
-  way["highway"]["name"~"Avenue|Ave|Road|Rd|Street|St|Boulevard|Blvd|Drive|Dr|Lane|Ln|Place|Pl|Parkway|Pkwy|Court|Ct|Circle|Cir|Terrace|Ter|Square|Sq|Way|Row|Trail"](area.searchArea);
+  way["highway"]["name"](area.searchArea);
 );
 out geom;
     """.strip()
@@ -98,9 +98,6 @@ out geom;
         tags = element.get("tags") or {}
         name = (tags.get("name") or tags.get("name:en") or "").strip()
         if not name:
-            continue
-
-        if not any(token in name.lower() for token in ["street", "road", "ave", "avenue", "drive", "lane", "place", "boulevard", "way", "court", "circle", "terrace", "square", "parkway", "trail"]):
             continue
 
         geometry = element.get("geometry") or []

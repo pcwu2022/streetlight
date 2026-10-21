@@ -58,7 +58,7 @@ export async function clearLegacyStorage(): Promise<void> {
     keysRequest.onsuccess = () => {
       const keys = keysRequest.result as string[];
       for (const key of keys) {
-        if (typeof key === 'string' && !key.startsWith('osmData_v3_')) {
+        if (typeof key === 'string' && !key.startsWith('osmData_v4_')) {
           store.delete(key);
         }
       }
@@ -88,7 +88,7 @@ export async function saveOsmCache(regionId: string, cache: OsmCache): Promise<v
     return new Promise((resolve, reject) => {
       const tx = db.transaction('osmCache', 'readwrite');
       const store = tx.objectStore('osmCache');
-      const req = store.put(cache, `osmData_v3_${regionId}`);
+      const req = store.put(cache, `osmData_v4_${regionId}`);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
@@ -114,12 +114,12 @@ export async function loadOsmCache(regionId: string): Promise<OsmCache | null> {
     return new Promise((resolve, reject) => {
       const tx = db.transaction('osmCache', 'readonly');
       const store = tx.objectStore('osmCache');
-      const req = store.get(`osmData_v3_${regionId}`);
+      const req = store.get(`osmData_v4_${regionId}`);
       req.onsuccess = () => {
         const cache = req.result as OsmCache | undefined;
         if (!cache || !isValidOsmCache(cache)) {
           const delTx = db.transaction('osmCache', 'readwrite');
-          delTx.objectStore('osmCache').delete(`osmData_v3_${regionId}`);
+          delTx.objectStore('osmCache').delete(`osmData_v4_${regionId}`);
           return resolve(null);
         }
 
@@ -128,7 +128,7 @@ export async function loadOsmCache(regionId: string): Promise<OsmCache | null> {
 
         if (cacheAge > sevenDays) {
           const delTx = db.transaction('osmCache', 'readwrite');
-          delTx.objectStore('osmCache').delete(`osmData_v3_${regionId}`);
+          delTx.objectStore('osmCache').delete(`osmData_v4_${regionId}`);
           resolve(null);
         } else {
           resolve(cache);
