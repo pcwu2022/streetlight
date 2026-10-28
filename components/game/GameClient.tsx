@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { fetchRoadsForRegion } from '../../lib/overpass';
-import { loadOsmCache, saveOsmCache, loadGame, saveGame, clearLegacyStorage, isValidOsmCache } from '../../lib/storage';
+import { loadRoadsForRegion } from '../../lib/roads';
+import { loadGame, saveGame } from '../../lib/storage';
 import { RoadFeature, GameSave, Region, GameLocale } from '../../types';
-import { computeStats, isMainRoad } from '../../lib/roadUtils';
+import { computeStats } from '../../lib/roadUtils';
 import { getRegionDisplayName } from '../../lib/regions';
 import { MapCanvas } from './MapCanvas';
 import { Sidebar } from './Sidebar';
@@ -44,25 +44,10 @@ export function GameClient({ regionId, region }: GameClientProps) {
         return;
       }
       try {
-        // Clear old storage first
-        await clearLegacyStorage();
-        
-        const cache = await loadOsmCache(regionId);
-        let fetchedRoads: RoadFeature[];
-
-        if (cache && isValidOsmCache(cache)) {
-          fetchedRoads = cache.roads;
-        } else {
-          const locale = region?.locale ?? 'tw';
-          fetchedRoads = await fetchRoadsForRegion(region!.osmRelationId, locale);
-          if (!Array.isArray(fetchedRoads) || fetchedRoads.length === 0) {
-            throw new Error(region?.locale === 'en' ? 'No roads were returned for this region.' : '這個區域沒有可載入的道路資料。');
-          }
-          await saveOsmCache(regionId, { fetchedAt: new Date().toISOString(), roads: fetchedRoads });
-        }
+        const fetchedRoads = await loadRoadsForRegion(region);
 
         if (!active) return;
-        setRoads(fetchedRoads.filter(r => isMainRoad(r.name, region?.locale ?? 'tw')));
+        setRoads(fetchedRoads);
 
         const save = loadGame(regionId);
         if (save) {
@@ -187,8 +172,8 @@ export function GameClient({ regionId, region }: GameClientProps) {
   );
 }
 
-// Overpass does not report query progress; this is a time-based estimate.
-const ESTIMATED_LOAD_SECONDS = 30;
+// Static file downloads do not report progress here; this is an estimate.
+const ESTIMATED_LOAD_SECONDS = 5;
 
 function RoadLoadingProgress({ locale }: { locale: GameLocale }) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);

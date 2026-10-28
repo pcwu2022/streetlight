@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { RoadFeature } from '../../types';
-import { normalizeRoadName } from '../../lib/roadUtils';
+import { matchRoadGuess, normalizeRoadName } from '../../lib/roadUtils';
 import { useToast } from '../ui/Toast';
 
 interface Props {
@@ -43,27 +43,20 @@ export function InputBar({ roads, foundRoads, onRoadsFound, locale = 'tw' }: Pro
       return;
     }
 
-    const reservedWords = locale === 'en'
-      ? new Set(['avenue', 'street', 'road', 'boulevard', 'drive', 'lane', 'place', 'way', 'court', 'circle', 'square', 'terrace', 'parkway', 'st', 'rd', 'ave', 'blvd'])
-      : new Set(['路', '街', '大道', '橋', '地下道', '隧道', '高速公路', '快速道路', '快速公路', '國道', '環線', '支線', '省道', '縣道', '市道', '大道一段', '大道二段', '大道三段', '大道四段', '大道五段', '大道六段', '大道七段', '大道八段', '大道九段', '大道十段']);
-    if (reservedWords.has(normalizedVal.toLowerCase())) {
+    const guess = matchRoadGuess(normalizedVal, roads, locale);
+    if (guess.status === 'reserved') {
       addToast(locale === 'en' ? 'Please enter a specific street name.' : '請輸入具體的道路名稱，不能僅輸入類型', 'warning');
       return;
     }
 
-    const allMatches = roads.filter(r => {
-      const target = normalizeRoadName(r.name, locale).toLowerCase();
-      const inputValue = normalizedVal.toLowerCase();
-      if (locale === 'en') {
-        return target === inputValue ||
-          target.startsWith(`${inputValue} `) ||
-          target.startsWith(`${inputValue}-`) ||
-          target.includes(` ${inputValue} `) ||
-          target.includes(`-${inputValue} `) ||
-          target.includes(`/${inputValue} `);
-      }
-      return target.startsWith(inputValue);
-    });
+    const allMatches = guess.matches;
+    // Count road names, not OSM segments, including roads already found.
+    if (guess.status === 'too-broad') {
+      addToast(locale === 'en'
+        ? 'Too many roads match. Keep typing a more specific street name.'
+        : '符合的道路超過 20 條，請繼續輸入更具體的道路名稱。', 'warning');
+      return;
+    }
     const unfoundMatches = allMatches.filter(r => !foundRoads.has(r.name));
 
     if (unfoundMatches.length > 0) {

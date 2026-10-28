@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { RoadFeature } from '../../types';
+import { ROAD_TYPE_COLORS } from '../../lib/roadTypes';
 
 interface Props {
   road: RoadFeature;
@@ -16,31 +17,11 @@ export const RoadPolyline = memo(({ road, isFound, isHovered, projectedPoints, o
   let filter = 'none';
 
   if (isFound) {
-    if (road.type === '高速公路') {
-      strokeColor = 'var(--road-highway)';
-      filter = 'url(#glow-magenta)'; // Warm glow
-    } else if (road.type === '快速道路') {
-      strokeColor = 'var(--road-express)';
-      filter = 'url(#glow-magenta)'; // Warm glow
-    } else if (road.type === '大道') {
-      strokeColor = 'var(--road-boulevard)';
-      filter = 'url(#glow-magenta)'; // Pink glow
-    } else if (road.type === '路') {
-      strokeColor = 'var(--road-road)';
-      filter = 'url(#glow-cyan)'; // Cool glow
-    } else if (road.type === '街') {
-      strokeColor = 'var(--road-street)';
-      filter = 'url(#glow-cyan)'; // Cool glow
-    } else if (road.type === '橋') {
-      strokeColor = 'var(--road-bridge)';
-      filter = 'url(#glow-amber)'; // Gold glow
-    } else if (road.type === '地下道' || road.type === '隧道') {
-      strokeColor = 'var(--road-underpass)';
-      filter = 'none'; // Minimalistic
-    } else {
-      strokeColor = 'var(--color-text-muted)';
-      filter = 'none';
-    }
+    strokeColor = ROAD_TYPE_COLORS[road.type] ?? ROAD_TYPE_COLORS.Other;
+    filter = strokeColor === 'var(--road-underpass)' ? 'none'
+      : strokeColor === 'var(--road-bridge)' ? 'url(#glow-amber)'
+      : ['var(--road-road)', 'var(--road-street)'].includes(strokeColor) ? 'url(#glow-cyan)'
+      : 'url(#glow-magenta)';
   } else if (isHovered) {
     strokeColor = '#2a3d5a';
   }

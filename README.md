@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Streetlight
 
-## Getting Started
+A road naming game built with Next.js. Run `npm install` and `npm run dev`, then open <http://localhost:3000/streetlight>.
 
-First, run the development server:
+## Stored maps
+
+Road snapshots live in `public/data/roads/<region-id>.json` and are tracked in Git. Next.js copies them into the static export, so gameplay loads the hosted JSON files instead of calling Overpass. The `/streetlight` base path is shared by Next.js and the map loader. Game progress stays in browser storage.
+
+`data/regions.json` is the shared region list for the application and download scripts. `public/data/manifest.json` lists the available snapshots. Lengths and road types are calculated from snapshot geometry when a map loads, keeping classification consistent with the current code.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run maps:check                          # Validate all configured map files, offline
+npm run maps:prefetch                       # Download missing maps; reuse existing files
+npm run maps:prefetch -- --regions new-york  # Download one map
+npm run maps:prefetch -- --regions new-york --refresh
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The prefetch command is an explicit maintenance step; development, builds, and gameplay do not contact Overpass. Use `--endpoint URL` to choose another Overpass server. Downloads reject empty or partial responses and preserve the last good snapshot on failure. Commit updated JSON files and the manifest along with any region changes.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+For bulk imports when Overpass is unavailable, download an OpenStreetMap PBF extract containing the complete city boundaries, then run:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+python3 -m venv /tmp/streetlight-maps
+/tmp/streetlight-maps/bin/pip install osmium shapely
+/tmp/streetlight-maps/bin/python data/import_osm_extract.py /path/to/taiwan.osm.pbf \
+  --locale tw --source https://download.geofabrik.de/asia/taiwan-latest.osm.pbf
+```
 
-## Learn More
+Use `--regions region-id` instead of `--locale` to import individual cities. Imports select named highways intersecting the configured administrative boundaries.
 
-To learn more about Next.js, take a look at the following resources:
+Map data: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Matching and classification
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Press Enter to submit a name. Road type words and keywords matching more than 20 distinct road names keep the input intact so you can narrow your guess. Multiple OSM segments of the same road count as one name; already found roads still count toward the limit.
 
-## Deploy on Vercel
+Broadway has its own category. All road categories, including Other, appear in the statistics and use the same colors as lit map segments.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Checks and deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm test
+npm run maps:check
+npm run build
+npm run deploy
+```
+
+The production build validates every configured map offline before exporting the site to `out/` for GitHub Pages.

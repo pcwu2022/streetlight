@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run maps:check",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsc -p tests/tsconfig.json && node --test tests/*.test.cjs && python3 -m unittest discover -s tests -p 'test_*.py'",
+    "maps:prefetch": "python3 data/prefetch_overpass.py",
+    "maps:check": "python3 data/prefetch_overpass.py --check",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d out -t --nojekyll"
   },

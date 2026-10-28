@@ -1,5 +1,7 @@
 import { GameLocale, RoadFeature, RoadType } from '../types';
 
+export const MAX_MATCHING_ROADS = 20;
+
 export function normalizeRoadName(input: string, locale: GameLocale = 'tw'): string {
   let str = input.trim();
   str = str.replace(/[\uff01-\uff5e]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
@@ -59,7 +61,7 @@ export function getMatchingRoads(query: string, roads: RoadFeature[], locale: Ga
         nameToMatch.includes(` ${queryToMatch} `) ||
         nameToMatch.includes(`-${queryToMatch} `) ||
         nameToMatch.includes(`/${queryToMatch} `)
-      : nameToMatch.includes(queryToMatch);
+      : nameToMatch.startsWith(queryToMatch);
 
     if (isMatch && !seenNames.has(road.name)) {
       seenNames.add(road.name);
@@ -67,7 +69,19 @@ export function getMatchingRoads(query: string, roads: RoadFeature[], locale: Ga
     }
   }
 
-  return matches.sort((a, b) => a.name.length - b.name.length).slice(0, 8);
+  return matches.sort((a, b) => a.name.length - b.name.length);
+}
+
+export function matchRoadGuess(query: string, roads: RoadFeature[], locale: GameLocale = 'tw') {
+  const normalized = normalizeRoadName(query, locale);
+  const reservedWords = locale === 'en'
+    ? new Set(['avenue', 'street', 'road', 'boulevard', 'drive', 'lane', 'place', 'way', 'court', 'circle', 'square', 'terrace', 'parkway', 'highway', 'expressway', 'freeway', 'st', 'rd', 'ave', 'blvd', 'dr', 'ln', 'pl', 'ct', 'cir', 'sq', 'ter', 'pkwy', 'hwy'])
+    : new Set(['路', '街', '大道', '橋', '地下道', '隧道', '高速公路', '快速道路', '快速公路', '國道', '環線', '支線', '省道', '縣道', '市道', '大道一段', '大道二段', '大道三段', '大道四段', '大道五段', '大道六段', '大道七段', '大道八段', '大道九段', '大道十段']);
+  if (reservedWords.has(normalized.toLowerCase().replace(/\.$/, ''))) {
+    return { status: 'reserved' as const, matches: [] };
+  }
+  const matches = getMatchingRoads(normalized, roads, locale);
+  return { status: matches.length > MAX_MATCHING_ROADS ? 'too-broad' as const : 'matched' as const, matches };
 }
 
 export interface Stats {
@@ -111,7 +125,7 @@ export function computeStats(roads: RoadFeature[], foundNames: Set<string>, rece
   stats.total = nameToLength.size;
 
   for (const [name, length] of nameToLength.entries()) {
-    const type = nameToType.get(name) || 'other';
+    const type = nameToType.get(name) || (locale === 'en' ? 'Other' : 'other');
     const targetType = stats.byType[type] ? type : 'other';
 
     if (!stats.byType[targetType]) {
@@ -133,14 +147,6 @@ export function computeStats(roads: RoadFeature[], foundNames: Set<string>, rece
         stats.shortestFound = { name, km: length };
       }
     }
-  }
-
-  if (locale === 'en' && !stats.byType['Road']) {
-    stats.byType['Road'] = { total: 0, found: 0 };
-    stats.byType['Street'] = { total: 0, found: 0 };
-    stats.byType['Avenue'] = { total: 0, found: 0 };
-    stats.byType['Boulevard'] = { total: 0, found: 0 };
-    stats.byType['Highway'] = { total: 0, found: 0 };
   }
 
   return stats;
