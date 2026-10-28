@@ -1,5 +1,5 @@
 :HL["/streetlight/_next/static/chunks/0fhjc_8r9hhpl.css","style"]
 :HL["/streetlight/_next/static/chunks/33r2brirzsnxh.css","style"]
-:HL["/streetlight/_next/static/chunks/0dqbakmztaazs.css","style"]
+:HL["/streetlight/_next/static/chunks/00g803q3ns3m5.css","style"]
 :HC["/",""]
-0:{"tree":{"name":"","param":null,"prefetchHints":24,"slots":{"children":{"name":"game","param":null,"prefetchHints":8,"slots":{"children":{"name":"regionId","param":{"type":"d","key":"vancouver","siblings":null},"prefetchHints":4,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"jW8ul0fRs9QIs0UElREOH"}
+0:{"tree":{"name":"","param":null,"prefetchHints":24,"slots":{"children":{"name":"game","param":null,"prefetchHints":8,"slots":{"children":{"name":"regionId","param":{"type":"d","key":"vancouver","siblings":null},"prefetchHints":4,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"CLmv77sFpY5CHEKzkkmvu"}
